@@ -1,14 +1,12 @@
 ![CI](https://github.com/joklee/ha_daikin_altherma4_modbus/actions/workflows/ci.yml/badge.svg)
 ![GitHub release (latest by date)](https://img.shields.io/github/v/release/joklee/ha_daikin_altherma4_modbus)
-![GitHub all releases](https://img.shields.io/github/downloads/joklee/ha_daikin_altherma4_modbus/total)
 ![GitHub stars](https://img.shields.io/github/stars/joklee/ha_daikin_altherma4_modbus?style=social)
-![GitHub forks](https://img.shields.io/github/forks/joklee/ha_daikin_altherma4_modbus?style=social)
 ![GitHub issues](https://img.shields.io/github/issues/joklee/ha_daikin_altherma4_modbus)
-![GitHub pull requests](https://img.shields.io/github/issues-pr/joklee/ha_daikin_altherma4_modbus)
 ![License](https://img.shields.io/github/license/joklee/ha_daikin_altherma4_modbus)
 ![HACS](https://img.shields.io/badge/HACS-Default-orange)
 ![Python](https://img.shields.io/badge/python-3.13%2B-blue)
 ![Home Assistant](https://img.shields.io/badge/Home%20Assistant-2026.9%2B-blue)
+[![Buy Me A Coffee](https://img.shields.io/badge/Buy%20Me%20a%20Coffee-ffdd00?style=flat&logo=buy-me-a-coffee&logoColor=black)](https://buymeacoffee.com/joklee)
 
 # Daikin Altherma 4 Modbus Integration for Home Assistant
 
@@ -36,6 +34,7 @@
 - [Supported Devices](#supported-devices)
 - [Development & Testing](#development--testing)
 - [License](#license)
+- [Support Me](#support-me)
 
 ---
 
@@ -837,3 +836,11 @@ Contributions are welcome! Please feel free to submit pull requests or open issu
 - Built with the Home Assistant Custom Integration Framework
 - Uses Home Assistant's shared Modbus component (`modbus-connection`) for Modbus TCP communication
 - Multilingual support with comprehensive translations
+
+---
+
+## Support Me
+
+If you find this integration useful, you can support my work:
+
+<a href="https://buymeacoffee.com/joklee"><img src="https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png" alt="Buy Me A Coffee" width="170"></a>
