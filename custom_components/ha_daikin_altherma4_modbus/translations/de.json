@@ -111,6 +111,9 @@
   },
   "entity": {
     "climate": {
+      "daikin_room_thermostat_climate": {
+        "name": "Raumthermostat (Hauptzone)"
+      },
       "daikin_thermostat_climate": {
         "name": "Heizungs-Thermostatsteuerung"
       },

@@ -50,6 +50,7 @@ from ..core.register_constants import (
     HOLDING_REGISTERS,
     INPUT_REGISTERS,
 )
+from .room_climate import DaikinRoomThermostatClimate
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -379,6 +380,7 @@ async def async_setup_entry(hass, entry, async_add_entities):
 
     entities = [
         DaikinThermostatClimate(coordinator, entry),
+        DaikinRoomThermostatClimate(coordinator, entry),
         DaikinDHWThermostat(coordinator, entry, dhw_type="manual"),
         DaikinDHWThermostat(coordinator, entry, dhw_type="booster"),
     ]

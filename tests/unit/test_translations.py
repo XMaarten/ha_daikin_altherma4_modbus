@@ -190,6 +190,7 @@ class TestTranslations:
             "daikin_dhw_booster_thermostat",
             "daikin_dhw_manual_thermostat",
             "daikin_thermostat_climate",
+            "daikin_room_thermostat_climate",
             "external_electric_power",
             "input_29",  # orphaned translation
             "input_34",  # orphaned translation
@@ -211,6 +212,7 @@ class TestTranslations:
             "daikin_dhw_booster_thermostat",
             "daikin_dhw_manual_thermostat",
             "daikin_thermostat_climate",
+            "daikin_room_thermostat_climate",
             "external_electric_power",
             "input_29",  # orphaned translation
             "input_34",  # orphaned translation
@@ -232,6 +234,7 @@ class TestTranslations:
             "daikin_dhw_booster_thermostat",
             "daikin_dhw_manual_thermostat",
             "daikin_thermostat_climate",
+            "daikin_room_thermostat_climate",
             "external_electric_power",
             "input_29",  # orphaned translation
             "input_34",  # orphaned translation

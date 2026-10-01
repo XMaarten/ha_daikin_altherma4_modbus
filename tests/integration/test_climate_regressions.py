@@ -46,6 +46,9 @@ def _install_fake_package(monkeypatch) -> str:
     package_module = types.ModuleType(package_name)
     package_module.__path__ = [str(package_path)]
     monkeypatch.setitem(sys.modules, package_name, package_module)
+    entities_package = types.ModuleType(f"{package_name}.entities")
+    entities_package.__path__ = [str(package_path / "entities")]
+    monkeypatch.setitem(sys.modules, f"{package_name}.entities", entities_package)
     return package_name
 
 
@@ -84,6 +87,8 @@ def _load_climate_module(monkeypatch):
     class ClimateEntityFeature:
         TARGET_TEMPERATURE = 1
         FAN_MODE = 2
+        TURN_ON = 4
+        TURN_OFF = 8
 
     climate_const_module.HVACMode = HVACMode
     climate_const_module.HVACAction = HVACAction
@@ -119,6 +124,10 @@ def _load_climate_module(monkeypatch):
     class CoordinatorEntity:
         def __init__(self, coordinator):
             self.coordinator = coordinator
+
+        @property
+        def available(self):
+            return self.coordinator.last_update_success
 
     coordinator_module.CoordinatorEntity = CoordinatorEntity
     monkeypatch.setitem(
@@ -473,3 +482,146 @@ async def test_fan_mode_raises_home_assistant_error_on_exception(monkeypatch):
 
     with pytest.raises(module.HomeAssistantError):
         await thermostat.async_set_fan_mode(module.FAN_AUTO)
+
+
+def _make_room_thermostat(module, **overrides):
+    data = {
+        "input_50": {"value": 26.1, "scale": 0.01},
+        "holding_76": {"value": 19.0, "scale": 0.01},
+        "holding_77": {"value": 20.0, "scale": 0.01},
+        "holding_6": {"value": 19},
+        "holding_7": {"value": 20},
+        "holding_3": {"value": 1},
+        "holding_4": {"value": 1},
+        "coil_2": {"value": 1},
+        "input_38": {"value": 1},
+        "discrete_20": {"value": 0},
+        "discrete_11": {"value": 1},
+        "input_84": {"value": 12},
+        "input_85": {"value": 30},
+        "input_86": {"value": 12},
+        "input_87": {"value": 35},
+    }
+    data.update(overrides)
+    coordinator = SimpleNamespace(
+        data=data,
+        last_update_success=True,
+        data_manager=SimpleNamespace(
+            write_holding_register=AsyncMock(),
+            write_coil_register=AsyncMock(),
+        ),
+    )
+    return module.DaikinRoomThermostatClimate(
+        coordinator, SimpleNamespace(entry_id="entry1")
+    )
+
+
+def test_room_temperatures_are_already_scaled(monkeypatch):
+    room = _make_room_thermostat(_load_climate_module(monkeypatch))
+    assert room.available
+    assert room.current_temperature == 26.1
+    assert room.target_temperature == 19
+    assert room.target_temperature_step == 0.1
+    assert room._attr_unique_id == "entry1_room_thermostat_main"
+
+
+@pytest.mark.parametrize(
+    "mode,active,target", [(1, 1, 19), (2, 2, 20), (0, 2, 20), (0, 0, 19)]
+)
+def test_room_target_follows_selected_and_active_mode(
+    monkeypatch, mode, active, target
+):
+    room = _make_room_thermostat(
+        _load_climate_module(monkeypatch),
+        holding_3={"value": mode},
+        input_38={"value": active},
+    )
+    assert room.target_temperature == target
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "mode,register,raw", [(1, "holding_76", 2150), (2, "holding_77", 2150)]
+)
+async def test_room_writes_fine_setpoints(monkeypatch, mode, register, raw):
+    room = _make_room_thermostat(
+        _load_climate_module(monkeypatch), holding_3={"value": mode}
+    )
+    await room.async_set_temperature(temperature=21.5)
+    room.coordinator.data_manager.write_holding_register.assert_awaited_once_with(
+        register, raw
+    )
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("invalid", [None, 32765, 32766, 32767])
+async def test_room_falls_back_to_legacy_setpoint(monkeypatch, invalid):
+    room = _make_room_thermostat(
+        _load_climate_module(monkeypatch), holding_76={"value": invalid}
+    )
+    assert room.available
+    assert room.target_temperature == 19
+    assert room.target_temperature_step == 1
+    await room.async_set_temperature(temperature=21.2)
+    room.coordinator.data_manager.write_holding_register.assert_awaited_once_with(
+        "holding_6", 21
+    )
+
+
+@pytest.mark.asyncio
+async def test_room_honors_limits_and_rejects_unavailable_setpoint(monkeypatch):
+    module = _load_climate_module(monkeypatch)
+    room = _make_room_thermostat(module, input_85={"value": 24})
+    await room.async_set_temperature(temperature=40)
+    room.coordinator.data_manager.write_holding_register.assert_awaited_once_with(
+        "holding_76", 2400
+    )
+    room.coordinator.data["holding_76"] = {"value": 32767}
+    room.coordinator.data["holding_6"] = {"value": 32767}
+    assert not room.available
+    with pytest.raises(module.HomeAssistantError):
+        await room.async_set_temperature(temperature=21)
+
+
+def test_room_action_excludes_dhw_only_compressor_run(monkeypatch):
+    room = _make_room_thermostat(_load_climate_module(monkeypatch))
+    assert room.hvac_action == "idle"
+    room.coordinator.data["discrete_20"] = {"value": 1}
+    assert room.hvac_action == "heating"
+    room.coordinator.data["input_38"] = {"value": 2}
+    assert room.hvac_action == "cooling"
+    room.coordinator.data["coil_2"] = {"value": 0}
+    assert room.hvac_action == "off"
+
+
+@pytest.mark.asyncio
+async def test_room_off_only_disables_main_zone(monkeypatch):
+    room = _make_room_thermostat(_load_climate_module(monkeypatch))
+    await room.async_turn_off()
+    room.coordinator.data_manager.write_coil_register.assert_awaited_once_with(
+        "coil_2", 0
+    )
+    room.coordinator.data_manager.write_holding_register.assert_not_awaited()
+
+
+@pytest.mark.asyncio
+async def test_room_modes_enable_space_and_main_zone(monkeypatch):
+    room = _make_room_thermostat(_load_climate_module(monkeypatch))
+    await room.async_set_hvac_mode("cool")
+    assert room.coordinator.data_manager.write_holding_register.await_args_list == [
+        (("holding_3", 2),),
+        (("holding_4", 1),),
+    ]
+    room.coordinator.data_manager.write_coil_register.assert_awaited_once_with(
+        "coil_2", 1
+    )
+
+
+def test_room_unavailable_when_connection_or_current_temperature_missing(monkeypatch):
+    room = _make_room_thermostat(_load_climate_module(monkeypatch))
+    room.coordinator.last_update_success = False
+    assert not room.available
+    room.coordinator.last_update_success = True
+    room.coordinator.data["input_50"] = {"value": 32765}
+    assert not room.available
+    assert room.current_temperature is None

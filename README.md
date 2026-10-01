@@ -199,7 +199,7 @@ You can change the host address, port, and unit ID via the reconfigure flow:
 | Switch | 6 | On/Off control (coils + holding) |
 | Number | 20+ | Setpoint settings |
 | Select | 10+ | Operation mode selection |
-| Climate | 2 | Thermostat control |
+| Climate | 4 | Water offset, main-zone room thermostat and two DHW controls |
 | Connection diagnostics (Enhanced device) | 2 binary + 6 sensors | Reachability, link status, timestamps, error counters (all diagnostic) |
 
 ### Sensors (Input Registers)
@@ -844,3 +844,29 @@ Contributions are welcome! Please feel free to submit pull requests or open issu
 If you find this integration useful, you can support my work:
 
 <a href="https://buymeacoffee.com/joklee"><img src="https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png" alt="Buy Me A Coffee" width="170"></a>
+
+### Main-zone room thermostat (fork addition)
+
+This fork adds **Room thermostat (Main zone)** (**Kamerthermostaat (hoofdzone)**
+in Dutch). Rename it to **Woonkamer** in Home Assistant if the main-zone
+thermostat is in your living room. It requires Daikin's main zone to be configured
+for **room thermostat control**; it does not change the installer control method.
+
+- Current room temperature: input register 50.
+- Heating/cooling room targets: holding registers 76/77 (0.1 °C slider steps),
+  falling back to registers 6/7 (whole degrees) when the fine registers are unavailable.
+- Room limits: input registers 84–87, with the documented defaults as fallback.
+- Off disables only the main zone (coil 2). On enables space heating/cooling
+  (holding 4) and the main zone; DHW is left enabled as configured.
+- Heat/Cool/Auto changes the system-wide mode (holding 3), which also affects
+  the additional zone. Auto uses the currently active heating/cooling mode
+  (input 38) to choose the room target, defaulting to heating while idle.
+- Heating/cooling activity follows the main-zone running flag (discrete 20),
+  so a DHW-only compressor run is not shown as room heating.
+
+The room entity is unavailable when the required registers are missing, including
+heating-only models that return 32766 for the operation-mode register.
+
+The existing water-offset climate entity and DHW controls remain available.
+After installing this fork, restart Home Assistant and select the new room
+climate entity in a built-in Thermostat card. Exact entity IDs are assigned by HA.

@@ -111,6 +111,9 @@
   },
   "entity": {
     "climate": {
+      "daikin_room_thermostat_climate": {
+        "name": "Kamerthermostaat (hoofdzone)"
+      },
       "daikin_thermostat_climate": {
         "name": "Verwarming Thermostaat Controle"
       },
